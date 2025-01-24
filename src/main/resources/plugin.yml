@@ -16,3 +16,18 @@ commands:
   nametags-reload:
     description: Reload the config
     permission: nametags.command.reload
+  nametags-toggle:
+    description: Toggle visibility of player nametags
+    permission: nametags.command.toggle
+    usage: /nametags-toggle [on/off] [player]
+
+permissions:
+  nametags.command.reload:
+    description: Allows reloading the plugin configuration
+    default: op
+  nametags.command.toggle:
+    description: Allows toggling nametag visibility for yourself
+    default: true
+  nametags.command.toggle.others:
+    description: Allows toggling nametag visibility for other players
+    default: op
