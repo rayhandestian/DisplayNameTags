@@ -92,6 +92,12 @@ public class NameTags extends JavaPlugin {
     public void reloadConfig() {
         super.reloadConfig();
 
+        // Reload messages.yml
+        File messagesFile = new File(getDataFolder(), "messages.yml");
+        if (!messagesFile.exists()) {
+            saveResource("messages.yml", false);
+        }
+
         String textFormatterIdentifier = getConfig().getString("formatter", "minimessage");
         formatter = TextFormatter.getById(textFormatterIdentifier)
             .orElse(TextFormatter.MINI_MESSAGE);

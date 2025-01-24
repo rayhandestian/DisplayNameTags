@@ -23,7 +23,7 @@ public class NameTagsToggleCommand implements CommandExecutor, TabCompleter {
     private final NameTags plugin;
     private final File dataFile;
     private FileConfiguration data;
-    private final FileConfiguration messages;
+    private FileConfiguration messages;
 
     public NameTagsToggleCommand(NameTags plugin) {
         this.plugin = plugin;
@@ -62,10 +62,6 @@ public class NameTagsToggleCommand implements CommandExecutor, TabCompleter {
             }
             targetPlayer = (Player) sender;
             toggleState = !isNameTagsHidden(targetPlayer);
-            
-            // Show current state before toggling
-            String currentState = isNameTagsHidden(targetPlayer) ? "OFF" : "ON";
-            sender.sendMessage(getMessage("nametags.toggle.current-state").replace("{state}", currentState));
         } else {
             if (args[0].equalsIgnoreCase("on")) {
                 toggleState = false;
@@ -185,5 +181,11 @@ public class NameTagsToggleCommand implements CommandExecutor, TabCompleter {
 
     public void reloadData() {
         data = YamlConfiguration.loadConfiguration(dataFile);
+        
+        // Reload messages
+        File messagesFile = new File(plugin.getDataFolder(), "messages.yml");
+        if (messagesFile.exists()) {
+            messages = YamlConfiguration.loadConfiguration(messagesFile);
+        }
     }
 } 
