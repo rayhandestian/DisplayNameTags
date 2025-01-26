@@ -2,11 +2,14 @@ package com.mattmx.nametags;
 
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.PacketListenerAbstract;
+import com.github.retrooper.packetevents.event.PacketListenerPriority;
+import com.github.retrooper.packetevents.event.PacketReceiveEvent;
 import com.github.retrooper.packetevents.event.PacketSendEvent;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.manager.server.VersionComparison;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityDataTypes;
+import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.ClientVersion;
 import com.github.retrooper.packetevents.protocol.potion.PotionTypes;
@@ -17,10 +20,12 @@ import com.mattmx.nametags.hook.PapiHook;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
+import java.util.UUID;
 
 public class OutgoingPacketListener extends PacketListenerAbstract {
     private static final byte TEXT_DISPLAY_TEXT_INDEX = 23;
@@ -30,6 +35,7 @@ public class OutgoingPacketListener extends PacketListenerAbstract {
     private final @NotNull NameTags plugin;
 
     public OutgoingPacketListener(@NotNull NameTags plugin) {
+        super(PacketListenerPriority.LOW);
         this.plugin = plugin;
     }
 
@@ -55,6 +61,32 @@ public class OutgoingPacketListener extends PacketListenerAbstract {
 
                     event.getUser().sendPacket(nameTagEntity.getPassengersPacket());
                 });
+
+                // Check if the spawned entity is a player
+                if (packet.getEntityType() == EntityTypes.PLAYER) {
+                    // Get the viewer (the player receiving the packet)
+                    if (event.getPlayer() instanceof Player viewer) {
+                        // If the viewer has nametags disabled
+                        if (plugin.getToggleCommand().isNameTagsHidden(viewer)) {
+                            // Schedule a task to hide the nametag after the entity is spawned
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                // Find the spawned player by entity ID
+                                for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                                    if (onlinePlayer.getEntityId() == packet.getEntityId()) {
+                                        // Get and update the nametag entity
+                                        NameTagEntity targetNameTag = plugin.getEntityManager().getNameTagEntity(onlinePlayer);
+                                        if (targetNameTag != null) {
+                                            targetNameTag.getPassenger().removeViewer(viewer.getUniqueId());
+                                            targetNameTag.updateVisibility();
+                                            targetNameTag.sendPassengerPacket(viewer);
+                                        }
+                                        break;
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
             }
             case PacketType.Play.Server.ENTITY_METADATA -> {
                 WrapperPlayServerEntityMetadata packet = new WrapperPlayServerEntityMetadata(event);
@@ -182,5 +214,10 @@ public class OutgoingPacketListener extends PacketListenerAbstract {
             default -> {
             }
         }
+    }
+
+    @Override
+    public void onPacketReceive(PacketReceiveEvent event) {
+        // Not needed for this functionality
     }
 }
