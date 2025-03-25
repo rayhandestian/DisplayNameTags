@@ -1,0 +1,10 @@
+nametags:
+  toggle:
+    toggle-on: "&aYou can now see other players' nametags!"
+    toggle-off: "&cYou can no longer see other players' nametags!"
+    other-on: "&aToggled nametags visibility ON for {player}"
+    other-off: "&cToggled nametags visibility OFF for {player}"
+    usage: "&cUsage: /nametags-toggle [on/off] [player]"
+    no-permission: "&cYou don't have permission to use this command!"
+    no-permission-others: "&cYou don't have permission to toggle nametags for other players!"
+    player-not-found: "&cPlayer not found!" 
