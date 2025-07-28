@@ -100,3 +100,30 @@ formatter: minimessage
 extra:
   # Should the name-tag be see-through if the player is glowing?
   glowing-feature: true
+
+# Messages for the new nametag features
+messages:
+  toggle-others:
+    enabled: "<green>You can now see other players' nametags</green>"
+    disabled: "<red>You have hidden other players' nametags</red>"
+  preview:
+    enabled: "<green>You can now see your own nametag</green>"
+    disabled: "<red>You have hidden your own nametag preview</red>"
+  hide-self:
+    enabled: "<green>Your nametag is now hidden from other players</green>"
+    disabled: "<green>Your nametag is now visible to other players</green>"
+  admin:
+    target-toggle-others: "<green>Toggled nametag visibility for <yellow>%player%</yellow></green>"
+    target-preview: "<green>Toggled nametag preview for <yellow>%player%</yellow></green>"
+    target-hide-self: "<green>Toggled nametag hiding for <yellow>%player%</yellow></green>"
+    target-enabled-others: "<yellow>An admin has enabled other players' nametags for you</yellow>"
+    target-disabled-others: "<yellow>An admin has hidden other players' nametags for you</yellow>"
+    target-enabled-preview: "<yellow>An admin has enabled nametag preview for you</yellow>"
+    target-disabled-preview: "<yellow>An admin has disabled nametag preview for you</yellow>"
+    target-enabled-hide: "<yellow>An admin has hidden your nametag from other players</yellow>"
+    target-disabled-hide: "<yellow>An admin has made your nametag visible to other players</yellow>"
+  errors:
+    no-permission: "<red>You don't have permission to use this command</red>"
+    player-not-found: "<red>Player not found</red>"
+    invalid-subcommand: "<red>Invalid subcommand. Use: toggle-others, preview, hide-self, reload, debug</red>"
+    console-only: "<red>This command can only be used by players</red>"

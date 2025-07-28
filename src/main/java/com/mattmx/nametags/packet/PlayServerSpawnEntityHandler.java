@@ -58,11 +58,35 @@ public class PlayServerSpawnEntityHandler {
         // To avoid name tag moving when being added
         nameTagEntity.updateLocation();
 
-        // Refreshes as viewer (crusty fix)
-        nameTagEntity.getPassenger().removeViewer(receiver);
-        nameTagEntity.getPassenger().addViewer(receiver);
+        // Get the Bukkit players to check visibility preferences
+        Player viewerPlayer = Bukkit.getPlayer(receiver.getUUID());
+        Player targetPlayer = (Player) nameTagEntity.getBukkitEntity();
+        
+        if (viewerPlayer == null || targetPlayer == null) {
+            return;
+        }
 
-        receiver.sendPacket(nameTagEntity.getPassengersPacket());
+        // Skip if viewer and target are the same (self-visibility handled elsewhere)
+        if (viewerPlayer.equals(targetPlayer)) {
+            return;
+        }
+
+        // Check if the viewer should see this nametag based on preferences
+        NameTags plugin = NameTags.getInstance();
+        boolean shouldSee = plugin.getVisibilityManager().shouldShowNametag(viewerPlayer, targetPlayer);
+        
+        // Always remove viewer first to ensure clean state
+        nameTagEntity.getPassenger().removeViewer(receiver);
+        
+        // Only add viewer if they should see the nametag
+        if (shouldSee) {
+            nameTagEntity.getPassenger().addViewer(receiver);
+            receiver.sendPacket(nameTagEntity.getPassengersPacket());
+        }
+        
+        // Debug logging (can be removed in production)
+        plugin.getLogger().fine(String.format("Visibility check: %s viewing %s = %s",
+            viewerPlayer.getName(), targetPlayer.getName(), shouldSee));
     }
 
 }

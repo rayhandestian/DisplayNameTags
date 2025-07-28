@@ -37,13 +37,12 @@ public class NameTagEntity {
 
         this.passenger.spawn(location);
 
-        if (NameTags.getInstance().getConfig().getBoolean("show-self", false)) {
-
-            if (this.bukkitEntity instanceof Player self) {
+        // Use visibility manager for self-visibility
+        if (this.bukkitEntity instanceof Player self) {
+            if (NameTags.getInstance().getVisibilityManager().shouldShowOwnNametag(self)) {
                 this.passenger.addViewer(self.getUniqueId());
                 sendPassengerPacket(self);
             }
-
         }
     }
 

@@ -17,5 +17,59 @@ libraries:
 
 commands:
   nametags:
-    description: Reload and debug commands
-    permission: nametags.command.admin
+    description: NameTags commands with subcommands
+    permission: nametags.command.toggle-others
+    usage: /<command> <subcommand> [player]
+
+permissions:
+  # Base user permissions
+  nametags.command.toggle-others:
+    description: Toggle visibility of other players' nametags
+    default: true
+  nametags.command.preview:
+    description: Toggle own nametag preview
+    default: true
+  nametags.command.hide-self:
+    description: Toggle hiding own nametag from others
+    default: true
+  
+  # Admin permissions for executing commands on other players
+  nametags.command.admin.toggle-others:
+    description: Toggle nametag visibility for other players
+    default: op
+  nametags.command.admin.preview:
+    description: Toggle nametag preview for other players
+    default: op
+  nametags.command.admin.hide-self:
+    description: Toggle nametag hiding for other players
+    default: op
+  
+  # Admin commands (reload, debug)
+  nametags.command.admin:
+    description: Access to admin commands (reload, debug)
+    default: op
+  
+  # Special admin permission to see hidden nametags
+  nametags.admin.see-hidden:
+    description: Can see nametags that players have hidden from others
+    default: op
+  
+  # Convenience permission groups
+  nametags.user:
+    description: All basic user permissions
+    default: true
+    children:
+      nametags.command.toggle-others: true
+      nametags.command.preview: true
+      nametags.command.hide-self: true
+  
+  nametags.admin:
+    description: All admin permissions
+    default: op
+    children:
+      nametags.user: true
+      nametags.command.admin: true
+      nametags.command.admin.toggle-others: true
+      nametags.command.admin.preview: true
+      nametags.command.admin.hide-self: true
+      nametags.admin.see-hidden: true

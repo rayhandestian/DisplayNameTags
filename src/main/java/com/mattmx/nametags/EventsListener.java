@@ -31,6 +31,9 @@ public class EventsListener implements Listener {
             plugin.getEntityManager()
                 .getOrCreateNameTagEntity(event.getPlayer())
                 .updateVisibility();
+            
+            // Apply initial visibility preferences
+            plugin.getVisibilityManager().applyInitialVisibility(event.getPlayer());
         });
     }
 
@@ -49,12 +52,12 @@ public class EventsListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerQuit(@NotNull PlayerQuitEvent event) {
         plugin.getEntityManager().removeLastSentPassengersCache(event.getPlayer().getEntityId());
-        // TODO(matt): might not be sending de-spawn packet to viewers all the time?
-
-        // Remove as a viewer from all entities
-        for (final NameTagEntity entity : plugin.getEntityManager().getAllEntities()) {
-            entity.getPassenger().removeViewer(event.getPlayer().getUniqueId());
-        }
+        
+        // Handle visibility cleanup
+        plugin.getVisibilityManager().handlePlayerQuit(event.getPlayer());
+        
+        // Remove player preferences from cache
+        plugin.getPreferencesManager().removeFromCache(event.getPlayer().getUniqueId());
 
         NameTagEntity entity = plugin.getEntityManager().removeEntity(event.getPlayer());
 
@@ -71,11 +74,8 @@ public class EventsListener implements Listener {
 
         nameTagEntity.updateLocation();
 
-        if (plugin.getConfig().getBoolean("show-self", false)) {
-            nameTagEntity.getPassenger().removeViewer(nameTagEntity.getBukkitEntity().getUniqueId());
-            nameTagEntity.getPassenger().addViewer(nameTagEntity.getBukkitEntity().getUniqueId());
-            nameTagEntity.sendPassengerPacket(event.getPlayer());
-        }
+        // Update visibility based on preferences
+        plugin.getVisibilityManager().updateVisibilityForPlayer(event.getPlayer());
     }
 
 
@@ -86,7 +86,8 @@ public class EventsListener implements Listener {
 
         if (nameTagEntity == null) return;
 
-        if (plugin.getConfig().getBoolean("show-self", false)) {
+        // Handle self-visibility based on preferences
+        if (plugin.getVisibilityManager().shouldShowOwnNametag(event.getPlayer())) {
             // Hides/removes tag on death/respawn screen
             nameTagEntity.getPassenger().removeViewer(nameTagEntity.getBukkitEntity().getUniqueId());
         }
@@ -99,7 +100,8 @@ public class EventsListener implements Listener {
 
         if (nameTagEntity == null) return;
 
-        if (plugin.getConfig().getBoolean("show-self", false)) {
+        // Handle self-visibility based on preferences
+        if (plugin.getVisibilityManager().shouldShowOwnNametag(event.getPlayer())) {
 
             String respawnWorld = event.getRespawnLocation().getWorld().getName();
             String playerWorld = event.getPlayer().getWorld().getName();

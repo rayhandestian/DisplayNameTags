@@ -4,11 +4,14 @@ import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.PacketEventsAPI;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.mattmx.nametags.config.ConfigDefaultsListener;
+import com.mattmx.nametags.config.MessageManager;
 import com.mattmx.nametags.config.TextFormatter;
 import com.mattmx.nametags.entity.NameTagEntityManager;
 import com.mattmx.nametags.hook.NeznamyTABHook;
 import com.mattmx.nametags.hook.SkinRestorerHook;
+import com.mattmx.nametags.preferences.PreferencesManager;
 import com.mattmx.nametags.utils.test.TestPlaceholderExpansion;
+import com.mattmx.nametags.visibility.VisibilityManager;
 import me.tofaa.entitylib.APIConfig;
 import me.tofaa.entitylib.EntityLib;
 import me.tofaa.entitylib.spigot.SpigotEntityLibPlatform;
@@ -41,6 +44,9 @@ public class NameTags extends JavaPlugin {
     private OutgoingPacketListener packetListener;
     private Metrics metrics;
     private @Nullable ConfigDefaultsListener defaultsListener = null;
+    private PreferencesManager preferencesManager;
+    private VisibilityManager visibilityManager;
+    private MessageManager messageManager;
 
     public static @NotNull NameTags getInstance() {
         return Objects.requireNonNull(instance, "NameTags plugin has not initialized yet! Did you forget to depend?");
@@ -51,6 +57,9 @@ public class NameTags extends JavaPlugin {
         instance = this;
 
         entityManager = new NameTagEntityManager();
+        preferencesManager = new PreferencesManager(this);
+        visibilityManager = new VisibilityManager(this, preferencesManager);
+        messageManager = new MessageManager(this);
         eventsListener = new EventsListener(this);
         packetListener = new OutgoingPacketListener(this);
 
@@ -83,7 +92,7 @@ public class NameTags extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(eventsListener, this);
         Bukkit.getScheduler().runTaskLater(this, DependencyVersionChecker::checkPacketEventsVersion, 10L);
 
-        Objects.requireNonNull(Bukkit.getPluginCommand("nametags")).setExecutor(new NameTagsCommand(this));
+        Objects.requireNonNull(Bukkit.getPluginCommand("nametags")).setExecutor(new com.mattmx.nametags.commands.NameTagsSubCommand(this));
 
         if (false) {
             new TestPlaceholderExpansion().register();
@@ -139,6 +148,11 @@ public class NameTags extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        // Save preferences before shutdown
+        if (preferencesManager != null) {
+            preferencesManager.savePreferences();
+        }
+        
         metrics.shutdown();
 
         HandlerList.unregisterAll(this.eventsListener);
@@ -166,5 +180,17 @@ public class NameTags extends JavaPlugin {
 
     public @NotNull TextFormatter getFormatter() {
         return this.formatter;
+    }
+
+    public @NotNull PreferencesManager getPreferencesManager() {
+        return this.preferencesManager;
+    }
+
+    public @NotNull VisibilityManager getVisibilityManager() {
+        return this.visibilityManager;
+    }
+
+    public @NotNull MessageManager getMessageManager() {
+        return this.messageManager;
     }
 }

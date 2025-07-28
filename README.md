@@ -13,11 +13,60 @@ text displays! (Thanks to [EntityLib](https://github.com/Tofaa2/EntityLib)!)
 </p>
 
 
+## Features
+
+### Player Visibility Controls
+- **Toggle Others' Nametags**: Players can hide/show all other players' nametags
+- **Preview Own Nametag**: Players can toggle visibility of their own nametag
+- **Hide From Others**: Players can hide their nametag from other players (with admin override)
+
+### Admin Management
+- **Admin Override**: Admins can manage any player's visibility settings
+- **Silent Commands**: Use `-notify` flag to optionally notify target players
+- **See Hidden**: Admins can see nametags that players have hidden from others
+
+## Commands
+
+### Player Commands
+```bash
+/nametags toggle-others    # Toggle visibility of other players' nametags
+/nametags preview          # Toggle own nametag preview
+/nametags hide-self        # Hide own nametag from others
+```
+
+### Admin Commands
+```bash
+/nametags toggle-others <player> [-notify]  # Toggle for other player
+/nametags preview <player> [-notify]        # Toggle preview for other player
+/nametags hide-self <player> [-notify]      # Toggle hiding for other player
+/nametags refresh [viewer] [target]         # Force visibility refresh
+/nametags reload                            # Reload plugin
+/nametags debug                             # Show debug information
+```
+
+## Permissions
+
+### User Permissions (default: true)
+- `nametags.command.toggle-others` - Toggle others' nametags
+- `nametags.command.preview` - Toggle own nametag preview
+- `nametags.command.hide-self` - Hide own nametag from others
+
+### Admin Permissions (default: op)
+- `nametags.command.admin.*` - Execute commands for other players
+- `nametags.admin.see-hidden` - See nametags hidden by players
+- `nametags.command.admin` - Access to reload and debug commands
+
+### Permission Groups
+- `nametags.user` - All basic user permissions
+- `nametags.admin` - All admin permissions
+
 ## Configuration
 
-Currently, you can customize default name tags and create grouped name tags.
+You can customize default name tags, create grouped name tags, and configure messages.
 
 Install the plugin and access the `plugins/NameTags/config.yml` for more information.
+
+Player preferences are automatically saved to `plugins/NameTags/player-preferences.json`.
 
 ## API
 
@@ -124,8 +173,16 @@ fun onItemSpawn(event: ItemSpawnEvent) = event.apply {
     
 </details>
 
+## Data Storage
+
+Player preferences are stored in JSON format with automatic optimization:
+- Only players with non-default settings are saved to reduce file size
+- Asynchronous saving prevents server lag
+- Automatic cleanup when players quit
+
 ## Roadmap
 
-- `/feat/customization`
-    Extension plugin to give players ability to customize their own
-    name tags by using a command and customizable GUI interface.
+- **GUI Interface**: Visual interface for managing preferences
+- **Group Preferences**: Set preferences for entire permission groups
+- **Temporary Settings**: Time-limited visibility toggles
+- **Advanced Filters**: Filter nametags by various criteria
