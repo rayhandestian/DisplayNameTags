@@ -23,7 +23,6 @@ public class NameTagEntity {
     private final @NotNull TraitHolder traits = new TraitHolder(this);
     private final @NotNull Entity bukkitEntity;
     private final @NotNull WrapperEntity passenger;
-    private float cachedViewRange = -1f;
 
     public NameTagEntity(@NotNull Entity entity) {
         this.bukkitEntity = entity;
@@ -54,18 +53,14 @@ public class NameTagEntity {
     }
 
     public void updateVisibility() {
-        updateVisibility(isInvisible());
+        if (bukkitEntity instanceof Player player) {
+            NameTags.getInstance().getVisibilityManager().updateVisibilityForPlayer(player);
+        }
     }
 
     public void updateVisibility(final boolean isInvisible) {
-        modify((meta) -> {
-            if (isInvisible && !meta.isInvisible()) {
-                this.cachedViewRange = meta.getViewRange();
-                meta.setViewRange(0f);
-            } else if (!isInvisible && meta.isInvisible()) {
-                meta.setViewRange(this.cachedViewRange);
-            }
-        });
+        // We delegate to the visibility manager which handles invisibility checks
+        updateVisibility();
     }
 
     public @NotNull TraitHolder getTraits() {

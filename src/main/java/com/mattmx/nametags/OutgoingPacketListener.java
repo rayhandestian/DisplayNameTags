@@ -12,6 +12,7 @@ import com.mattmx.nametags.entity.NameTagEntity;
 import com.mattmx.nametags.packet.PlayServerEntityMetaDataHandler;
 import com.mattmx.nametags.packet.PlayServerSetPassengersHandler;
 import com.mattmx.nametags.packet.PlayServerSpawnEntityHandler;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -41,7 +42,6 @@ public class OutgoingPacketListener extends PacketListenerAbstract {
                 }
             }
             case PacketType.Play.Server.ENTITY_EFFECT -> {
-                // TODO per-player impl (teams may be able to see invisible players)
                 final WrapperPlayServerEntityEffect packet = new WrapperPlayServerEntityEffect(event);
 
                 if (packet.getPotionType() != PotionTypes.INVISIBILITY) return;
@@ -50,10 +50,11 @@ public class OutgoingPacketListener extends PacketListenerAbstract {
 
                 if (nameTagEntity == null) return;
 
-                nameTagEntity.updateVisibility(true);
+                if (nameTagEntity.getBukkitEntity() instanceof Player target) {
+                    plugin.getVisibilityManager().refreshVisibilityBetween(event.getUser(), target, true);
+                }
             }
             case PacketType.Play.Server.REMOVE_ENTITY_EFFECT -> {
-                // TODO per-player impl (teams may be able to see invisible players)
                 final WrapperPlayServerRemoveEntityEffect packet = new WrapperPlayServerRemoveEntityEffect(event);
 
                 if (packet.getPotionType() != PotionTypes.INVISIBILITY) return;
@@ -62,7 +63,9 @@ public class OutgoingPacketListener extends PacketListenerAbstract {
 
                 if (nameTagEntity == null) return;
 
-                nameTagEntity.updateVisibility(false);
+                if (nameTagEntity.getBukkitEntity() instanceof Player target) {
+                    plugin.getVisibilityManager().refreshVisibilityBetween(event.getUser(), target, false);
+                }
             }
             default -> {
             }
