@@ -12,6 +12,7 @@ import com.mattmx.nametags.entity.NameTagEntity;
 import com.mattmx.nametags.packet.PlayServerEntityMetaDataHandler;
 import com.mattmx.nametags.packet.PlayServerSetPassengersHandler;
 import com.mattmx.nametags.packet.PlayServerSpawnEntityHandler;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -46,26 +47,44 @@ public class OutgoingPacketListener extends PacketListenerAbstract {
 
                 if (packet.getPotionType() != PotionTypes.INVISIBILITY) return;
 
-                final NameTagEntity nameTagEntity = plugin.getEntityManager().getNameTagEntityById(packet.getEntityId());
+                final int entityId = packet.getEntityId();
+                final Player viewer = (Player) event.getPlayer();
 
-                if (nameTagEntity == null) return;
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (!viewer.isOnline()) return;
 
-                if (nameTagEntity.getBukkitEntity() instanceof Player target) {
-                    plugin.getVisibilityManager().refreshVisibilityBetween(event.getUser(), target, true);
-                }
+                    final NameTagEntity nameTagEntity = plugin.getEntityManager().getNameTagEntityById(entityId);
+
+                    if (nameTagEntity == null) return;
+
+                    if (nameTagEntity.getBukkitEntity() instanceof Player target) {
+                        plugin.getVisibilityManager().refreshVisibilityBetween(viewer, target, true);
+                    } else {
+                        nameTagEntity.updateVisibility(true);
+                    }
+                });
             }
             case PacketType.Play.Server.REMOVE_ENTITY_EFFECT -> {
                 final WrapperPlayServerRemoveEntityEffect packet = new WrapperPlayServerRemoveEntityEffect(event);
 
                 if (packet.getPotionType() != PotionTypes.INVISIBILITY) return;
 
-                final NameTagEntity nameTagEntity = plugin.getEntityManager().getNameTagEntityById(packet.getEntityId());
+                final int entityId = packet.getEntityId();
+                final Player viewer = (Player) event.getPlayer();
 
-                if (nameTagEntity == null) return;
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (!viewer.isOnline()) return;
 
-                if (nameTagEntity.getBukkitEntity() instanceof Player target) {
-                    plugin.getVisibilityManager().refreshVisibilityBetween(event.getUser(), target, false);
-                }
+                    final NameTagEntity nameTagEntity = plugin.getEntityManager().getNameTagEntityById(entityId);
+
+                    if (nameTagEntity == null) return;
+
+                    if (nameTagEntity.getBukkitEntity() instanceof Player target) {
+                        plugin.getVisibilityManager().refreshVisibilityBetween(viewer, target, false);
+                    } else {
+                        nameTagEntity.updateVisibility(false);
+                    }
+                });
             }
             default -> {
             }

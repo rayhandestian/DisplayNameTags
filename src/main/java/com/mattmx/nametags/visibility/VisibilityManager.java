@@ -40,7 +40,12 @@ public class VisibilityManager {
      * Determines if a viewer should see a target player's nametag, with explicit invisibility state.
      */
     public boolean shouldShowNametag(@NotNull Player viewer, @NotNull Player target, boolean targetIsInvisible) {
-        // Check invisibility first
+        // Ensure we respect Vanish (Bukkit API)
+        if (!viewer.canSee(target)) {
+            return false;
+        }
+
+        // Check invisibility
         if (targetIsInvisible) {
             // Spectators can see invisible entities
             if (viewer.getGameMode() == GameMode.SPECTATOR) {
