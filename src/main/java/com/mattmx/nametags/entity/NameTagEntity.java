@@ -58,14 +58,25 @@ public class NameTagEntity {
     }
 
     public void updateVisibility(final boolean isInvisible) {
-        modify((meta) -> {
-            if (isInvisible && !meta.isInvisible()) {
-                this.cachedViewRange = meta.getViewRange();
-                meta.setViewRange(0f);
-            } else if (!isInvisible && meta.isInvisible()) {
-                meta.setViewRange(this.cachedViewRange);
-            }
-        });
+        if (bukkitEntity instanceof Player player) {
+            // For players, we delegate to the visibility manager for per-player visibility
+            NameTags.getInstance().getVisibilityManager().updateVisibilityForPlayer(player);
+        } else {
+            // For non-player entities, we use global visibility state (view range)
+            modify((meta) -> {
+                if (isInvisible) {
+                    if (meta.getViewRange() > 0) {
+                        this.cachedViewRange = meta.getViewRange();
+                        meta.setViewRange(0f);
+                    }
+                } else {
+                    if (meta.getViewRange() == 0f) {
+                        // Restore cached view range or default to 50 if not cached
+                        meta.setViewRange(this.cachedViewRange > 0 ? this.cachedViewRange : 50f);
+                    }
+                }
+            });
+        }
     }
 
     public @NotNull TraitHolder getTraits() {

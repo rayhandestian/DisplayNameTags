@@ -4,7 +4,12 @@ import com.mattmx.nametags.NameTags;
 import com.mattmx.nametags.entity.NameTagEntity;
 import com.mattmx.nametags.preferences.PlayerPreferences;
 import com.mattmx.nametags.preferences.PreferencesManager;
+import org.bukkit.GameMode;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
@@ -22,9 +27,49 @@ public class VisibilityManager {
     }
 
     /**
-     * Determines if a viewer should see a target player's nametag
+     * Determines if a viewer should see a target player's nametag.
+     * Checks if the target is invisible based on their current state.
      */
     public boolean shouldShowNametag(@NotNull Player viewer, @NotNull Player target) {
+        boolean isInvisible = target.isInvisible() ||
+            (target instanceof LivingEntity && ((LivingEntity) target).hasPotionEffect(PotionEffectType.INVISIBILITY));
+        return shouldShowNametag(viewer, target, isInvisible);
+    }
+
+    /**
+     * Determines if a viewer should see a target player's nametag, with explicit invisibility state.
+     */
+    public boolean shouldShowNametag(@NotNull Player viewer, @NotNull Player target, boolean targetIsInvisible) {
+        // Ensure we respect Vanish (Bukkit API)
+        if (!viewer.canSee(target)) {
+            return false;
+        }
+
+        // Check invisibility
+        if (targetIsInvisible) {
+            // Spectators can see invisible entities
+            if (viewer.getGameMode() == GameMode.SPECTATOR) {
+                // fall through to other checks? Spectator usually sees everything translucent.
+                // But we still respect hide-others preference? Usually spectators override.
+                // Let's assume spectator sees it unless strictly hidden.
+            } else {
+                // Check teams
+                Scoreboard scoreboard = viewer.getScoreboard();
+                Team team = scoreboard.getEntryTeam(target.getName());
+
+                // If on the same team and can see friendly invisibles
+                if (team != null && team.hasEntry(viewer.getName())) {
+                    if (!team.canSeeFriendlyInvisibles()) {
+                        return false;
+                    }
+                    // If true, they can see, so we proceed to preference checks
+                } else {
+                    // Not on same team (or no team), invisible target is hidden
+                    return false;
+                }
+            }
+        }
+
         // If viewer has hidden others' nametags, they shouldn't see any
         PlayerPreferences viewerPrefs = preferencesManager.getPreferences(viewer);
         if (viewerPrefs.isHideOthersNametags()) {
@@ -77,28 +122,11 @@ public class VisibilityManager {
      * Updates who can see a target player's nametag
      */
     private void updateViewersForTarget(@NotNull Player target, @NotNull NameTagEntity targetTag) {
-        PlayerPreferences targetPrefs = preferencesManager.getPreferences(target);
-        
-        // If target is hiding from others, remove all viewers except admins
-        if (targetPrefs.isHideFromOthers()) {
-            for (UUID viewerUuid : targetTag.getPassenger().getViewers().toArray(new UUID[0])) {
-                Player viewer = plugin.getServer().getPlayer(viewerUuid);
-                if (viewer != null && !viewer.equals(target)) {
-                    if (!viewer.hasPermission("nametags.admin.see-hidden")) {
-                        targetTag.getPassenger().removeViewer(viewerUuid);
-                    }
-                }
-            }
-        } else {
-            // Target is not hiding, add back viewers who should see them
-            for (Player onlinePlayer : plugin.getServer().getOnlinePlayers()) {
-                if (!onlinePlayer.equals(target) && shouldShowNametag(onlinePlayer, target)) {
-                    // Check if they're in range and should see the nametag
-                    if (isInRange(onlinePlayer, target)) {
-                        targetTag.getPassenger().addViewer(onlinePlayer.getUniqueId());
-                        targetTag.sendPassengerPacket(onlinePlayer);
-                    }
-                }
+        // We use the default check which reads current invisibility state
+        for (Player onlinePlayer : plugin.getServer().getOnlinePlayers()) {
+            if (!onlinePlayer.equals(target)) {
+                // Logic is handled in refreshVisibilityBetween
+                refreshVisibilityBetween(onlinePlayer, target);
             }
         }
     }
@@ -107,21 +135,11 @@ public class VisibilityManager {
      * Updates what a viewer can see (when they toggle hide-others)
      */
     private void updateViewerVisibility(@NotNull Player viewer) {
-        PlayerPreferences viewerPrefs = preferencesManager.getPreferences(viewer);
-        
         for (NameTagEntity nameTag : plugin.getEntityManager().getAllEntities()) {
             Player target = (Player) nameTag.getBukkitEntity();
             if (target.equals(viewer)) continue; // Skip own nametag
             
-            boolean shouldSee = shouldShowNametag(viewer, target);
-            boolean currentlySees = nameTag.getPassenger().getViewers().contains(viewer.getUniqueId());
-            
-            if (shouldSee && !currentlySees && isInRange(viewer, target)) {
-                nameTag.getPassenger().addViewer(viewer.getUniqueId());
-                nameTag.sendPassengerPacket(viewer);
-            } else if (!shouldSee && currentlySees) {
-                nameTag.getPassenger().removeViewer(viewer.getUniqueId());
-            }
+            refreshVisibilityBetween(viewer, target);
         }
     }
 
@@ -130,18 +148,7 @@ public class VisibilityManager {
      * This ensures visibility preferences are respected when players come into range
      */
     public void handlePlayerEnterRange(@NotNull Player viewer, @NotNull Player target) {
-        NameTagEntity targetTag = plugin.getEntityManager().getNameTagEntity(target);
-        if (targetTag == null) return;
-
-        boolean shouldSee = shouldShowNametag(viewer, target);
-        boolean currentlySees = targetTag.getPassenger().getViewers().contains(viewer.getUniqueId());
-
-        if (shouldSee && !currentlySees) {
-            targetTag.getPassenger().addViewer(viewer.getUniqueId());
-            targetTag.sendPassengerPacket(viewer);
-        } else if (!shouldSee && currentlySees) {
-            targetTag.getPassenger().removeViewer(viewer.getUniqueId());
-        }
+        refreshVisibilityBetween(viewer, target);
     }
 
     /**
@@ -187,11 +194,7 @@ public class VisibilityManager {
             if (!onlinePlayer.equals(player)) {
                 NameTagEntity otherTag = plugin.getEntityManager().getNameTagEntity(onlinePlayer);
                 if (otherTag != null) {
-                    boolean shouldSee = shouldShowNametag(player, onlinePlayer);
-                    if (shouldSee && isInRange(player, onlinePlayer)) {
-                        otherTag.getPassenger().addViewer(player.getUniqueId());
-                        otherTag.sendPassengerPacket(player);
-                    }
+                    refreshVisibilityBetween(player, onlinePlayer);
                 }
             }
         }
@@ -240,10 +243,19 @@ public class VisibilityManager {
      * Forces a refresh of visibility between two specific players
      */
     public void refreshVisibilityBetween(@NotNull Player viewer, @NotNull Player target) {
+        boolean isInvisible = target.isInvisible() ||
+            (target instanceof LivingEntity && ((LivingEntity) target).hasPotionEffect(PotionEffectType.INVISIBILITY));
+        refreshVisibilityBetween(viewer, target, isInvisible);
+    }
+
+    /**
+     * Forces a refresh of visibility between two specific players with explicit invisibility state
+     */
+    public void refreshVisibilityBetween(@NotNull Player viewer, @NotNull Player target, boolean targetIsInvisible) {
         NameTagEntity targetTag = plugin.getEntityManager().getNameTagEntity(target);
         if (targetTag == null) return;
 
-        boolean shouldSee = shouldShowNametag(viewer, target);
+        boolean shouldSee = shouldShowNametag(viewer, target, targetIsInvisible);
         boolean currentlySees = targetTag.getPassenger().getViewers().contains(viewer.getUniqueId());
 
         if (shouldSee && !currentlySees && isInRange(viewer, target)) {
