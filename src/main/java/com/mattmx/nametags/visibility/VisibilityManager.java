@@ -38,6 +38,11 @@ public class VisibilityManager {
             return viewer.hasPermission("nametags.admin.see-hidden");
         }
 
+        // Check if viewer can see the target player (respects vanish plugins)
+        if (!viewer.canSee(target)) {
+            return false;
+        }
+
         return true;
     }
 
@@ -90,7 +95,19 @@ public class VisibilityManager {
                 }
             }
         } else {
-            // Target is not hiding, add back viewers who should see them
+            // First, remove viewers who should no longer see the nametag
+            for (UUID viewerUuid : targetTag.getPassenger().getViewers().toArray(new UUID[0])) {
+                Player viewer = plugin.getServer().getPlayer(viewerUuid);
+                if (viewer != null && !viewer.equals(target)) {
+                    boolean shouldSee = shouldShowNametag(viewer, target);
+                    boolean isInRange = isInRange(viewer, target);
+                    if (!shouldSee || !isInRange) {
+                        targetTag.getPassenger().removeViewer(viewerUuid);
+                    }
+                }
+            }
+            
+            // Then, add back viewers who should see them
             for (Player onlinePlayer : plugin.getServer().getOnlinePlayers()) {
                 if (!onlinePlayer.equals(target) && shouldShowNametag(onlinePlayer, target)) {
                     // Check if they're in range and should see the nametag

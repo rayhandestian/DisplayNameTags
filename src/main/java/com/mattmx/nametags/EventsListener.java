@@ -78,6 +78,20 @@ public class EventsListener implements Listener {
         plugin.getVisibilityManager().updateVisibilityForPlayer(event.getPlayer());
     }
 
+    @EventHandler
+    public void onPlayerTeleport(@NotNull PlayerTeleportEvent event) {
+        if (event.isCancelled()) return;
+        
+        NameTagEntity nameTagEntity = plugin.getEntityManager().getNameTagEntity(event.getPlayer());
+
+        if (nameTagEntity == null) return;
+
+        nameTagEntity.updateLocation();
+
+        // Update visibility after teleport to handle vanish/appear changes
+        plugin.getVisibilityManager().updateVisibilityForPlayer(event.getPlayer());
+    }
+
 
     @EventHandler
     public void onPlayerDeath(@NotNull PlayerDeathEvent event) {
