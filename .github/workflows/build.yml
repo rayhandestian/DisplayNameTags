@@ -1,10 +1,14 @@
 # Will simply build your gradle project.
 name: Build Gradle Project
 
-# This action will run every time you push to the "dev" branch.
+# This action will run every time you push to the "dev" branch and on pull requests.
 on:
   push:
     branches:
+    - "dev"
+  pull_request:
+    branches:
+    - "main"
     - "dev"
 
 jobs:
