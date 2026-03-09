@@ -22,7 +22,8 @@ repositories {
     maven("https://repo.dmulloy2.net/repository/public/")
     maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
     maven("https://repo.codemc.io/repository/maven-releases/")
-    maven("https://maven.evokegames.gg/snapshots")
+    maven("https://repo.opencollab.dev/main/")
+
 
     mavenLocal()
     mavenCentral()
@@ -37,11 +38,10 @@ dependencies {
     compileOnly(libs.tab)
     compileOnly(libs.packetevents)
     compileOnly(libs.skinsrestorer)
-
-    // Downloaded during runtime
-    compileOnly(libs.caffeine)
+    compileOnly(libs.floodgate)
 
     // Shaded
+    implementation(libs.caffeine)
     implementation(libs.entitylib)
     implementation(libs.bstats)
 
@@ -64,6 +64,7 @@ tasks {
 
         relocate("me.tofaa.entitylib", "com.mattmx.nametags.shaded.entitylib")
         relocate("org.bstats", "com.mattmx.nametags.shaded.bstats")
+        relocate("com.github.caffeine", "com.mattmx.nametags.shaded.caffeine")
     }
 
     assemble {
@@ -108,7 +109,7 @@ tasks {
             hangar("ViaBackwards", "5.3.2")
             modrinth("packetevents","2HJtPM2W")
 
-            // For testing groups in config.yml
+            // For testing groups in config-lines.yml
             modrinth("luckperms", "v5.4.145-bukkit")
         }
 

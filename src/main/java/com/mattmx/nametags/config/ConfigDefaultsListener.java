@@ -6,6 +6,8 @@ import com.mattmx.nametags.entity.trait.RefreshTrait;
 import com.mattmx.nametags.entity.trait.SneakTrait;
 import com.mattmx.nametags.event.NameTagEntityCreateEvent;
 import me.tofaa.entitylib.meta.display.AbstractDisplayMeta;
+import me.tofaa.entitylib.meta.display.TextDisplayMeta;
+import org.bukkit.Color;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -57,11 +59,16 @@ public class ConfigDefaultsListener implements Listener {
     public void registerDefaultRefreshListener(@NotNull NameTagEntity tag, long refreshMillis) {
         Player player = (Player) tag.getBukkitEntity();
 
-        tag.getTraits().getOrAddTrait(RefreshTrait.class, () ->
-            RefreshTrait.ofMillis(
-                plugin,
-                refreshMillis,
-                (entity) -> {
+        tag.getTraits().getOrAddTrait(RefreshTrait.class, () -> RefreshTrait.ofMillis(
+            plugin,
+            refreshMillis,
+            (entity) -> {
+                long recentRefreshEvery = plugin.getConfig().getLong("defaults.refresh-every", 50);
+
+                synchronized(this) {
+                    TextDisplayMeta meta = entity.getMeta();
+                    meta.setNotifyAboutChanges(false);
+
                     TextDisplayMetaConfiguration.applyMeta(defaultSection(), entity.getMeta());
                     TextDisplayMetaConfiguration.applyTextMeta(defaultSection(), entity.getMeta(), player);
 
@@ -73,7 +80,6 @@ public class ConfigDefaultsListener implements Listener {
                         .sorted(GroupPriorityComparator.get())
                         .toList();
 
-                    long recentRefreshEvery = plugin.getConfig().getLong("defaults.refresh-every", 50);
                     if (!groups.isEmpty()) {
                         Map.Entry<String, ConfigurationSection> highest = groups.getLast();
 
@@ -103,10 +109,11 @@ public class ConfigDefaultsListener implements Listener {
                         .ifPresent(SneakTrait::manuallyUpdateSneakingOpacity);
 
                     entity.updateVisibility();
+
+                    meta.setNotifyAboutChanges(true);
                     entity.getPassenger().refresh();
                 }
-            )
-        );
+            }
+        ));
     }
-
 }

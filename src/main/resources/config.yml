@@ -9,8 +9,7 @@ defaults:
   # overwriting the vanilla implementation provided yourself.
   enabled: true
   # How often should we refresh tags (in milliseconds)
-  # Do not go lower than 50ms (1 tick) or clients may be kicked.
-  refresh-every: 500
+  refresh-every: 1000
   # Lines of text to display.
   text:
     - "<white>%player_name%</white>"
@@ -61,6 +60,13 @@ defaults:
 # Should the player see their own tag?
 # This is not entirely supported, but bug reports still help
 show-self: false
+
+# Whether we should show their own tag for bedrock clients.
+show-self-bedrock: false
+
+# Disables vanilla name tag rendering through a scoreboard teams packet
+# sent to the client on joining the server.
+disable-vanilla: true
 
 sneak:
   # Should we modify the opacity of the tag's background when the player shifts?
