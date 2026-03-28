@@ -5,6 +5,8 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEn
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetPassengers;
 import com.mattmx.nametags.NameTags;
 import com.mattmx.nametags.entity.NameTagEntity;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -41,6 +43,26 @@ public class PlayServerSetPassengersHandler {
                 .setLastSentPassengers(packet.getEntityId(), passengers);
 
             event.markForReEncode(true);
+        }
+        
+        // Check visibility for the receiver - if they can't see the target, don't add the nametag passenger
+        Player viewer = Bukkit.getPlayer(event.getUser().getUUID());
+        if (viewer != null) {
+            Player target = (Player) nameTagEntity.getBukkitEntity();
+            if (target != null && !viewer.equals(target)) {
+                boolean shouldSee = plugin.getVisibilityManager().shouldShowNametag(viewer, target);
+                if (!shouldSee) {
+                    // Remove the nametag passenger from the packet
+                    int[] filteredPassengers = Arrays.stream(passengers)
+                        .filter(id -> id != nameTagEntity.getPassenger().getEntityId())
+                        .toArray();
+                    packet.setPassengers(filteredPassengers);
+                    NameTags.getInstance()
+                        .getEntityManager()
+                        .setLastSentPassengers(packet.getEntityId(), filteredPassengers);
+                    event.markForReEncode(true);
+                }
+            }
         }
     }
 
