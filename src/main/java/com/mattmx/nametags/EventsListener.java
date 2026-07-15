@@ -78,6 +78,25 @@ public class EventsListener implements Listener {
         plugin.getVisibilityManager().updateVisibilityForPlayer(event.getPlayer());
     }
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerTeleport(@NotNull PlayerTeleportEvent event) {
+        // If they are changing worlds, it's already handled by PlayerChangedWorldEvent
+        if (event.getFrom().getWorld() != event.getTo().getWorld()) {
+            return;
+        }
+
+        NameTagEntity nameTagEntity = plugin.getEntityManager().getNameTagEntity(event.getPlayer());
+
+        if (nameTagEntity == null) return;
+
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!event.getPlayer().isOnline()) return;
+
+            nameTagEntity.updateLocation();
+            plugin.getVisibilityManager().updateVisibilityForPlayer(event.getPlayer());
+        }, 1L);
+    }
+
 
     @EventHandler
     public void onPlayerDeath(@NotNull PlayerDeathEvent event) {
