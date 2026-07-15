@@ -25,6 +25,11 @@ public class VisibilityManager {
      * Determines if a viewer should see a target player's nametag
      */
     public boolean shouldShowNametag(@NotNull Player viewer, @NotNull Player target) {
+        // If Bukkit hides the target from the viewer (e.g. vanished player)
+        if (!viewer.canSee(target)) {
+            return false;
+        }
+
         // If viewer has hidden others' nametags, they shouldn't see any
         PlayerPreferences viewerPrefs = preferencesManager.getPreferences(viewer);
         if (viewerPrefs.isHideOthersNametags()) {
