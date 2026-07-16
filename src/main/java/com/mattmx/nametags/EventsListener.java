@@ -23,7 +23,13 @@ public class EventsListener implements Listener {
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
     public void onPlayerJoin(@NotNull PlayerJoinEvent event) {
-        Bukkit.getAsyncScheduler().runNow(plugin, (task) -> {
+        // Must run on the main thread: creating the nametag entity fires
+        // NameTagEntityPreSpawnEvent / NameTagEntityCreateEvent, and Paper 26.2
+        // throws IllegalStateException when a synchronous Bukkit event is called
+        // from an async context (older versions tolerated it). Firing it async
+        // aborted creation, so no nametag entity ever existed -> tags/preview
+        // rendered nothing.
+        Bukkit.getScheduler().runTask(plugin, () -> {
             if (!event.getPlayer().isConnected()) {
                 return;
             }
@@ -31,7 +37,7 @@ public class EventsListener implements Listener {
             plugin.getEntityManager()
                 .getOrCreateNameTagEntity(event.getPlayer())
                 .updateVisibility();
-            
+
             // Apply initial visibility preferences
             plugin.getVisibilityManager().applyInitialVisibility(event.getPlayer());
         });
