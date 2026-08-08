@@ -139,6 +139,17 @@ public class NameTagEntityManager {
             return;
         }
 
+        // REPLACED means the value was overwritten, not evicted, so there is nothing to clean
+        // up. Acting on it is fatal: both branches below re-insert the entry with
+        // nameTagCache.put(), and a put over a key that is still present fires another REPLACED
+        // notification, which Caffeine dispatches to ForkJoinPool.commonPool, which calls this
+        // method again, which puts again. The loop sustains itself and pins every common-pool
+        // worker, starving everything else that shares that pool (ExcellentEconomy resolves
+        // command targets there, so /ethea give took tens of minutes to apply).
+        if (cause == RemovalCause.REPLACED) {
+            return;
+        }
+
         Entity entity = tagEntity.getBukkitEntity();
 
         if (entity instanceof Player player) {
