@@ -57,13 +57,34 @@ public class NameTagEntityManager {
 
             return newlyCreated;
         });
-        return Objects.requireNonNull(tagEntity, "Cache.get(…) unexpectedly returned null for UUID " + entity.getUniqueId());
+        Objects.requireNonNull(tagEntity, "Cache.get(…) unexpectedly returned null for UUID " + entity.getUniqueId());
+
+        // Safety net. A cache hit whose passenger is despawned can never be revived, because
+        // spawn() only runs inside the loader above and this value skipped it. Handing it out
+        // produces a nametag that is invisible to everyone with no error anywhere, so make the
+        // failure loud instead of silent if anything ever re-introduces that state.
+        if (!tagEntity.getPassenger().isSpawned()) {
+            NameTags.getInstance().getLogger().warning(
+                "Cached nametag for " + entity.getUniqueId() + " is despawned and cannot be revived."
+                    + " Its nametag will be invisible to every viewer. This is a bug, please report it."
+            );
+        }
+
+        return tagEntity;
     }
 
     public @Nullable NameTagEntity removeEntity(@NotNull Entity entity) {
         final NameTagEntity nameTagEntity = nameTagCache.getIfPresent(entity.getUniqueId());
 
-        nameTagCache.invalidate(entity.getUniqueId());
+        // Must do the full cleanup itself, as 1.5.6 did inline. handleRemoval no longer acts on
+        // the EXPLICIT notification this fires, so nothing else will.
+        //
+        // Clearing lastSentPassengers is the load-bearing part: NameTagEntity.getPassengersPacket()
+        // prefers that cached array over recomputing, so a stale entry makes both repair paths
+        // (NameTagsSubCommand#handleReload and PlayServerSpawnEntityHandler) send a SetPassengers
+        // naming the destroyed display's entity id. SetPassengers replaces the passenger list, so
+        // that also unmounts whatever the client did have.
+        removeEntirely(entity);
 
         return nameTagEntity;
     }
@@ -139,14 +160,28 @@ public class NameTagEntityManager {
             return;
         }
 
-        // REPLACED means the value was overwritten, not evicted, so there is nothing to clean
-        // up. Acting on it is fatal: both branches below re-insert the entry with
-        // nameTagCache.put(), and a put over a key that is still present fires another REPLACED
-        // notification, which Caffeine dispatches to ForkJoinPool.commonPool, which calls this
-        // method again, which puts again. The loop sustains itself and pins every common-pool
-        // worker, starving everything else that shares that pool (ExcellentEconomy resolves
-        // command targets there, so /ethea give took tens of minutes to apply).
-        if (cause == RemovalCause.REPLACED) {
+        // EXPIRED is the only eviction this class owns. For every other cause somebody else
+        // already owns the entry's lifecycle, and the re-insert below is destructive:
+        //
+        //   REPLACED -> the value was overwritten rather than evicted, so there is nothing to
+        //   clean up. Acting on it is fatal: both branches below re-insert with
+        //   nameTagCache.put(), and a put over a key that is still present fires another
+        //   REPLACED notification, which Caffeine dispatches to ForkJoinPool.commonPool, which
+        //   calls this method again, which puts again. The loop sustains itself and pins every
+        //   common-pool worker, starving everything else that shares that pool (ExcellentEconomy
+        //   resolves command targets there, so /ethea give took tens of minutes to apply).
+        //
+        //   EXPLICIT -> removeEntity() deliberately dropped the entry and the caller is about to
+        //   call destroy() on it. Re-inserting resurrects a despawned WrapperEntity, and a
+        //   despawned wrapper can never be revived: spawn() is only reachable from
+        //   NameTagEntity.initialize(), which only runs inside the cache loader above, and a
+        //   value already in the cache never goes through the loader again. addViewer() on it
+        //   sends no packets and logs nothing, while removeViewer() still fires a real
+        //   DestroyEntities. The UUID cache then holds a corpse while nameTagEntityByEntityId
+        //   holds the live tag, so client untracking works and retracking silently does nothing.
+        //   That is the "all nametags vanish until /nametags reload, then vanish again on
+        //   teleport" regression. 1.5.6 guarded this with `cause != RemovalCause.EXPIRED`.
+        if (cause != RemovalCause.EXPIRED) {
             return;
         }
 
